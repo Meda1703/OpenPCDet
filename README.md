@@ -12,13 +12,79 @@ It is also the official code release of [`[PointRCNN]`](https://arxiv.org/abs/18
 * The codes of MPPNet has been supported. 
 
 ## Overview
-- [Changelog](#changelog)
-- [Design Pattern](#openpcdet-design-pattern)
-- [Model Zoo](#model-zoo)
 - [Installation](docs/INSTALL.md)
 - [Quick Demo](docs/DEMO.md)
 - [Getting Started](docs/GETTING_STARTED.md)
+- [Design Pattern](#openpcdet-design-pattern)
+- [Model Zoo](#model-zoo)
 - [Citation](#citation)
+
+
+## Installation
+
+### Install `pcdet v0.5`
+NOTE: Please re-install `pcdet v0.5` by running `python setup.py develop` even if you have already installed previous version.
+
+1. Clone this repository.
+```shell
+git clone https://github.com/open-mmlab/OpenPCDet.git
+```
+
+2. Install spconv library.
+```shell
+pip install spconv-cu{cuda_version}
+```
+
+3. Install this `pcdet` library and its dependent libraries by running the following command:
+```shell
+python setup.py develop
+```
+
+Please refer to [INSTALL.md](docs/INSTALL.md) for detailed installation of `OpenPCDet`.
+
+## Quick Demo
+
+```
+pip install open3d
+```
+Run the demo with a pretrained model (e.g. PV-RCNN):
+
+```shell
+python demo.py --cfg_file cfgs/kitti_models/pv_rcnn.yaml \
+    --ckpt pv_rcnn_8369.pth \
+    --data_path ${POINT_CLOUD_DATA}
+```
+
+Please refer to [DEMO.md](docs/DEMO.md) for a quick demo to test with a pretrained model and 
+visualize the predicted results on your custom data or the original KITTI data.
+
+## Getting Started
+
+
+### KITTI Dataset
+* Please download the official [KITTI 3D object detection](http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=3d) dataset and organize the downloaded files as follows (the road planes could be downloaded from [[road plane]](https://drive.google.com/file/d/1d5mq0RXRnvHPVeKx6Q612z0YRO1t2wAp/view?usp=sharing), which are optional for data augmentation in the training):
+* If you would like to train [CaDDN](../tools/cfgs/kitti_models/CaDDN.yaml), download the precomputed [depth maps](https://drive.google.com/file/d/1qFZux7KC_gJ0UHEg-qGJKqteE9Ivojin/view?usp=sharing) for the KITTI training set
+* NOTE: if you already have the data infos from `pcdet v0.1`, you can choose to use the old infos and set the DATABASE_WITH_FAKELIDAR option in tools/cfgs/dataset_configs/kitti_dataset.yaml as True. The second choice is that you can create the infos and gt database again and leave the config unchanged.
+
+```
+OpenPCDet
+├── data
+│   ├── kitti
+│   │   │── ImageSets
+│   │   │── training
+│   │   │   ├──calib & velodyne & label_2 & image_2 & (optional: planes) & (optional: depth_2)
+│   │   │── testing
+│   │   │   ├──calib & velodyne & image_2
+├── pcdet
+├── tools
+```
+
+* Generate the data infos by running the following command: 
+```python 
+python -m pcdet.datasets.kitti.kitti_dataset create_kitti_infos tools/cfgs/dataset_configs/kitti_dataset.yaml
+```
+
+Please refer to [GETTING_STARTED.md](docs/GETTING_STARTED.md) to learn more usage about this project.
 
 
 ## Introduction
@@ -92,72 +158,6 @@ Selected supported methods are shown in the below table. The results are the 3D 
 | [CaDDN (Mono)](tools/cfgs/kitti_models/CaDDN.yaml) |~15 hours| 21.38 | 13.02 | 9.76 | [model-774M](https://drive.google.com/file/d/1OQTO2PtXT8GGr35W9m2GZGuqgb6fyU1V/view?usp=sharing) |
 
 
-
-## Installation
-
-### Install `pcdet v0.5`
-NOTE: Please re-install `pcdet v0.5` by running `python setup.py develop` even if you have already installed previous version.
-
-1. Clone this repository.
-```shell
-git clone https://github.com/open-mmlab/OpenPCDet.git
-```
-
-2. Install spconv library.
-```shell
-pip install spconv-cu{cuda_version}
-```
-
-3. Install this `pcdet` library and its dependent libraries by running the following command:
-```shell
-python setup.py develop
-```
-
-Please refer to [INSTALL.md](docs/INSTALL.md) for detailed installation of `OpenPCDet`.
-
-## Quick Demo
-
-```
-pip install open3d
-```
-Run the demo with a pretrained model (e.g. PV-RCNN):
-
-```shell
-python demo.py --cfg_file cfgs/kitti_models/pv_rcnn.yaml \
-    --ckpt pv_rcnn_8369.pth \
-    --data_path ${POINT_CLOUD_DATA}
-```
-
-Please refer to [DEMO.md](docs/DEMO.md) for a quick demo to test with a pretrained model and 
-visualize the predicted results on your custom data or the original KITTI data.
-
-## Getting Started
-
-
-### KITTI Dataset
-* Please download the official [KITTI 3D object detection](http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=3d) dataset and organize the downloaded files as follows (the road planes could be downloaded from [[road plane]](https://drive.google.com/file/d/1d5mq0RXRnvHPVeKx6Q612z0YRO1t2wAp/view?usp=sharing), which are optional for data augmentation in the training):
-* If you would like to train [CaDDN](../tools/cfgs/kitti_models/CaDDN.yaml), download the precomputed [depth maps](https://drive.google.com/file/d/1qFZux7KC_gJ0UHEg-qGJKqteE9Ivojin/view?usp=sharing) for the KITTI training set
-* NOTE: if you already have the data infos from `pcdet v0.1`, you can choose to use the old infos and set the DATABASE_WITH_FAKELIDAR option in tools/cfgs/dataset_configs/kitti_dataset.yaml as True. The second choice is that you can create the infos and gt database again and leave the config unchanged.
-
-```
-OpenPCDet
-├── data
-│   ├── kitti
-│   │   │── ImageSets
-│   │   │── training
-│   │   │   ├──calib & velodyne & label_2 & image_2 & (optional: planes) & (optional: depth_2)
-│   │   │── testing
-│   │   │   ├──calib & velodyne & image_2
-├── pcdet
-├── tools
-```
-
-* Generate the data infos by running the following command: 
-```python 
-python -m pcdet.datasets.kitti.kitti_dataset create_kitti_infos tools/cfgs/dataset_configs/kitti_dataset.yaml
-```
-
-Please refer to [GETTING_STARTED.md](docs/GETTING_STARTED.md) to learn more usage about this project.
 
 
 ## License
