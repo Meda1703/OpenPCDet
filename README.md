@@ -82,8 +82,53 @@ OpenPCDet
 python -m pcdet.datasets.kitti.kitti_dataset create_kitti_infos tools/cfgs/dataset_configs/kitti_dataset.yaml
 ```
 
+### Train a model
+You could optionally add extra command line parameters `--batch_size ${BATCH_SIZE}` and `--epochs ${EPOCHS}` to specify your preferred parameters. 
+  
+
+* Train with multiple GPUs or multiple machines
+```shell script
+cd tools
+sh scripts/dist_train.sh ${NUM_GPUS} --cfg_file ${CONFIG_FILE}
+
+# or 
+cd tools
+sh scripts/slurm_train.sh ${PARTITION} ${JOB_NAME} ${NUM_GPUS} --cfg_file ${CONFIG_FILE}
+```
+
+* Train with a single GPU:
+```shell script
+cd tools
+python train.py --cfg_file ${CONFIG_FILE}
+```
+
 Please refer to [GETTING_STARTED.md](docs/GETTING_STARTED.md) to learn more usage about this project.
 
+
+### Test and evaluate the pretrained models
+* Test with a pretrained model: 
+```shell script
+cd tools
+python test.py --cfg_file ${CONFIG_FILE} --batch_size ${BATCH_SIZE} --ckpt ${CKPT}
+```
+
+* To test all the saved checkpoints of a specific training setting and draw the performance curve on the Tensorboard, add the `--eval_all` argument: 
+```shell script
+cd tools
+python test.py --cfg_file ${CONFIG_FILE} --batch_size ${BATCH_SIZE} --eval_all
+```
+
+* To test with multiple GPUs:
+```shell script
+cd tools
+sh scripts/dist_test.sh ${NUM_GPUS} \
+    --cfg_file ${CONFIG_FILE} --batch_size ${BATCH_SIZE}
+
+# or
+cd tools
+sh scripts/slurm_test_mgpu.sh ${PARTITION} ${NUM_GPUS} \
+    --cfg_file ${CONFIG_FILE} --batch_size ${BATCH_SIZE}
+```
 
 ## Introduction
 
