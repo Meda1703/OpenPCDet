@@ -94,6 +94,29 @@ Selected supported methods are shown in the below table. The results are the 3D 
 
 
 ## Installation
+
+### Install `pcdet v0.5`
+NOTE: Please re-install `pcdet v0.5` by running `python setup.py develop` even if you have already installed previous version.
+
+1. Clone this repository.
+```shell
+git clone https://github.com/open-mmlab/OpenPCDet.git
+```
+
+2. Install spconv library.
+```shell
+pip install spconv-cu{cuda_version}
+```
+
+3. Install this `pcdet` library and its dependent libraries by running the following command:
+```shell
+python setup.py develop
+```
+
+Please refer to [INSTALL.md](docs/INSTALL.md) for detailed installation of `OpenPCDet`.
+
+## Quick Demo
+
 ```
 pip install open3d
 ```
@@ -104,10 +127,7 @@ python demo.py --cfg_file cfgs/kitti_models/pv_rcnn.yaml \
     --ckpt pv_rcnn_8369.pth \
     --data_path ${POINT_CLOUD_DATA}
 ```
-Please refer to [INSTALL.md](docs/INSTALL.md) for the installation of `OpenPCDet`.
 
-
-## Quick Demo
 Please refer to [DEMO.md](docs/DEMO.md) for a quick demo to test with a pretrained model and 
 visualize the predicted results on your custom data or the original KITTI data.
 
