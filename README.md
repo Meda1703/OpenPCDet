@@ -23,11 +23,9 @@ It is also the official code release of [`[PointRCNN]`](https://arxiv.org/abs/18
 ## Installation
 
 ### Install `pcdet v0.5`
-NOTE: Please re-install `pcdet v0.5` by running `python setup.py develop` even if you have already installed previous version.
-
 1. Clone this repository.
 ```shell
-git clone https://github.com/open-mmlab/OpenPCDet.git
+git clone https://github.com/Meda1703/OpenPCDet.git
 ```
 
 2. Install spconv library.
