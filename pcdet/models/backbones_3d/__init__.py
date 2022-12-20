@@ -3,7 +3,8 @@ from .spconv_backbone import VoxelBackBone8x, VoxelResBackBone8x
 from .spconv_backbone_2d import PillarBackBone8x, PillarRes18BackBone8x
 from .spconv_backbone_focal import VoxelBackBone8xFocal
 from .spconv_unet import UNetV2
-
+from .votr_backbone import VoxelTransformer, VoxelTransformerV2, VoxelTransformerV3
+from .asym import Asymm3DSpconv
 __all__ = {
     'VoxelBackBone8x': VoxelBackBone8x,
     'UNetV2': UNetV2,
@@ -12,5 +13,7 @@ __all__ = {
     'VoxelResBackBone8x': VoxelResBackBone8x,
     'VoxelBackBone8xFocal': VoxelBackBone8xFocal,
     'PillarBackBone8x': PillarBackBone8x,
-    'PillarRes18BackBone8x': PillarRes18BackBone8x
+    'PillarRes18BackBone8x': PillarRes18BackBone8x,
+    'VoxelTransformer': VoxelTransformer,
+    'Asymm3DSpconv': Asymm3DSpconv
 }

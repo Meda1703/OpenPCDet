@@ -7,7 +7,6 @@ from ...utils.spconv_utils import replace_feature, spconv
 
 def post_act_block(in_channels, out_channels, kernel_size, indice_key=None, stride=1, padding=0,
                    conv_type='subm', norm_fn=None):
-
     if conv_type == 'subm':
         conv = spconv.SubMConv3d(in_channels, out_channels, kernel_size, bias=False, indice_key=indice_key)
     elif conv_type == 'spconv':
@@ -122,8 +121,6 @@ class VoxelBackBone8x(nn.Module):
             'x_conv3': 64,
             'x_conv4': 64
         }
-
-
 
     def forward(self, batch_dict):
         """
@@ -289,5 +286,5 @@ class VoxelResBackBone8x(nn.Module):
                 'x_conv4': 8,
             }
         })
-        
+
         return batch_dict
