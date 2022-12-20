@@ -6,6 +6,7 @@ import torch.optim.lr_scheduler as lr_sched
 
 from .fastai_optim import OptimWrapper
 from .learning_schedules_fastai import CosineWarmupLR, OneCycle
+from .optimizer.ranger21 import Ranger21
 
 
 def build_optimizer(model, optim_cfg):
@@ -30,6 +31,13 @@ def build_optimizer(model, optim_cfg):
         optimizer = OptimWrapper.create(
             optimizer_func, 3e-3, get_layer_groups(model), wd=optim_cfg.WEIGHT_DECAY, true_wd=True, bn_wd=True
         )
+    elif optim_cfg.OPTIMIZER == 'ranger21':
+        optimizer = Ranger21(model.parameters(), lr=optim_cfg.LR, weight_decay=optim_cfg.WEIGHT_DECAY,
+                             betas=(0.9, 0.99), use_warmup=True, use_cheb=False, lookahead_active=True,
+                             normloss_active=True, normloss_factor=6e-4, use_adaptive_gradient_clipping=True,
+                             use_madgrad=False, num_warmup_iterations=None, num_epochs=optim_cfg.NUM_EPOCHS,
+                             warmup_pct_default=.3, using_gc=True, num_batches_per_epoch=3712/optim_cfg.BATCH_SIZE_PER_GPU)
+
     else:
         raise NotImplementedError
 
@@ -38,6 +46,7 @@ def build_optimizer(model, optim_cfg):
 
 def build_scheduler(optimizer, total_iters_each_epoch, total_epochs, last_epoch, optim_cfg):
     decay_steps = [x * total_iters_each_epoch for x in optim_cfg.DECAY_STEP_LIST]
+
     def lr_lbmd(cur_epoch):
         cur_decay = 1
         for decay_step in decay_steps:

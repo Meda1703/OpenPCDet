@@ -82,7 +82,6 @@ scikit-image==0.18.3
 scikit-learn==1.0.2
 scipy==1.7.1
 SharedArray==3.2.2
-spconv-cu102==2.2.3
 tenacity==8.1.0
 tensorboardX==2.4
 termcolor==2.0.1
