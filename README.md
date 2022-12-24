@@ -30,12 +30,13 @@ git clone https://github.com/Meda1703/OpenPCDet.git
 
 2. Install spconv library.
 ```shell
+# python 3.7.11
 conda install pytorch==1.10.0 cudatoolkit=10.2 torchvision -c pytorch -y
 ```
 
 3. Install spconv library.
 ```shell
-pip install spconv-cu102
+pip install spconv-cu102==2.2.3
 ```
 
 4. Install this `pcdet` library and its dependent libraries by running the following command:
