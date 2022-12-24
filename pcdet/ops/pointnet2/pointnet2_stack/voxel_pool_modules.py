@@ -13,7 +13,7 @@ class NeighborVoxelSAModuleMSG(nn.Module):
         Args:
             query_ranges: list of int, list of neighbor ranges to group with
             nsamples: list of int, number of samples in each ball query
-            mlps: list of list of int, spec of the pointnet before the global pooling for each scale
+            mlps: list of lists of int, spec of the pointnet before the global pooling for each scale
             use_xyz:
             pool_method: max_pool / avg_pool
         """

@@ -194,7 +194,7 @@ class UpBlock(nn.Module):
         upA = upA.replace_feature(self.trans_act(upA.features))
         upA = upA.replace_feature(self.trans_bn(upA.features))
 
-        ## upsample
+        # upsample
         upA = self.up_subm(upA)
 
         upA = upA.replace_feature(upA.features + skip.features)
@@ -272,10 +272,10 @@ class Asymm3DSpconv(nn.Module):
                                   height_pooling=True,
                                   indice_key="down5")
 
-        # self.upBlock0 = UpBlock(16 * num_input_channels, 16 * num_input_channels, indice_key="up0", up_key="down5")
-        # self.upBlock1 = UpBlock(16 * num_input_channels, 8 * num_input_channels, indice_key="up1", up_key="down4")
-        # self.upBlock2 = UpBlock(8 * num_input_channels, 4 * num_input_channels, indice_key="up2", up_key="down3")
-        # self.upBlock3 = UpBlock(4 * num_input_channels, 2 * num_input_channels, indice_key="up3", up_key="down2")
+        self.upBlock0 = UpBlock(16 * num_input_channels, 16 * num_input_channels, indice_key="up0", up_key="down5")
+        self.upBlock1 = UpBlock(16 * num_input_channels, 8 * num_input_channels, indice_key="up1", up_key="down4")
+        self.upBlock2 = UpBlock(8 * num_input_channels, 4 * num_input_channels, indice_key="up2", up_key="down3")
+        self.upBlock3 = UpBlock(4 * num_input_channels, 2 * num_input_channels, indice_key="up3", up_key="down2")
 
         # self.ReconNet = ReconBlock(2 * num_input_channels, 2 * num_input_channels, indice_key="recon")
         norm_fn = partial(nn.BatchNorm1d, eps=1e-3, momentum=0.01)
@@ -283,7 +283,7 @@ class Asymm3DSpconv(nn.Module):
         last_pad = self.model_cfg.get('last_pad', last_pad)
         self.conv_out = spconv.SparseSequential(
             # [200, 150, 5] -> [200, 150, 2]
-            spconv.SparseConv3d(256, 256, (3, 1, 1), stride=(2, 1, 1), padding=last_pad,
+            spconv.SparseConv3d(128, 256, (3, 1, 1), stride=(2, 1, 1), padding=last_pad,
                                 bias=False, indice_key='spconv_down2'),
             norm_fn(256),
             nn.ReLU(),
@@ -291,10 +291,10 @@ class Asymm3DSpconv(nn.Module):
 
         self.num_point_features = 256
         self.backbone_channels = {
-            'x_conv1': 32,
-            'x_conv2': 64,
-            'x_conv3': 128,
-            'x_conv4': 256
+            'x_conv1': 256,
+            'x_conv2': 128,
+            'x_conv3': 64,
+            'x_conv4': 32
         }
 
     def forward(self, batch_dict):
@@ -321,18 +321,23 @@ class Asymm3DSpconv(nn.Module):
         down2c, down2b = self.resBlock3(down1c)
         down3c, down3b = self.resBlock4(down2c)
         down4c, down4b = self.resBlock5(down3c)
+        # upsample
+        up4e = self.upBlock0(down4c, down4b)
+        up3e = self.upBlock1(up4e, down3b)
+        up2e = self.upBlock2(up3e, down2b)
+        up1e = self.upBlock3(up2e, down1b)
 
-        out = self.conv_out(down4b)
+        out = self.conv_out(up3e)
         batch_dict.update({
             'encoded_spconv_tensor': out,
-            'encoded_spconv_tensor_stride': 8
+            'encoded_spconv_tensor_stride': 2
         })
         batch_dict.update({
             'multi_scale_3d_features': {
-                'x_conv1': down1b,
-                'x_conv2': down2b,
-                'x_conv3': down3b,
-                'x_conv4': down4b,
+                'x_conv1': up4e,
+                'x_conv2': up3e,
+                'x_conv3': up2e,
+                'x_conv4': up1e,
             }
         })
 
