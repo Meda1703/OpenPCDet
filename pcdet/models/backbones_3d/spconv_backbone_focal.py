@@ -13,9 +13,11 @@ class objDict:
     def to_object(obj: object, **data):
         obj.__dict__.update(data)
 
+
 class ConfigDict:
     def __init__(self, name):
         self.name = name
+
     def __getitem__(self, item):
         return getattr(self, item)
 
@@ -39,7 +41,6 @@ class SparseSequentialBatchdict(spconv.SparseSequential):
 
 def post_act_block(in_channels, out_channels, kernel_size, indice_key=None, stride=1, padding=0,
                    conv_type='subm', norm_fn=None):
-
     if conv_type == 'subm':
         conv = spconv.SubMConv3d(in_channels, out_channels, kernel_size, bias=False, indice_key=indice_key)
     elif conv_type == 'spconv':
@@ -121,17 +122,17 @@ class VoxelBackBone8xFocal(nn.Module):
         kernel_size = model_cfg.get('KERNEL_SIZE', 3)
         mask_multi = model_cfg.get('MASK_MULTI', False)
         skip_mask_kernel = model_cfg.get('SKIP_MASK_KERNEL', False)
-        skip_mask_kernel_image =  model_cfg.get('SKIP_MASK_KERNEL_IMG', False)
+        skip_mask_kernel_image = model_cfg.get('SKIP_MASK_KERNEL_IMG', False)
         enlarge_voxel_channels = model_cfg.get('ENLARGE_VOXEL_CHANNELS', -1)
         img_pretrain = model_cfg.get('IMG_PRETRAIN', "../checkpoints/deeplabv3_resnet50_coco-cd0a2569.pth")
 
         if use_img:
-            model_cfg_seg=dict(
+            model_cfg_seg = dict(
                 name='SemDeepLabV3',
                 backbone='ResNet50',
-                num_class=21, # pretrained on COCO
+                num_class=21,  # pretrained on COCO
                 args={"feat_extract_layer": ["layer1"],
-                    "pretrained_path": img_pretrain},
+                      "pretrained_path": img_pretrain},
                 channel_reduce={
                     "in_channels": [256],
                     "out_channels": [16],
@@ -144,12 +145,17 @@ class VoxelBackBone8xFocal(nn.Module):
             objDict.to_object(cfg_dict, **model_cfg_seg)
             self.semseg = PyramidFeat2D(optimize=True, model_cfg=cfg_dict)
 
-            self.conv_focal_multimodal = FocalSparseConv(16, 16, image_channel=model_cfg_seg['channel_reduce']['out_channels'][0],
-                                        topk=topk, threshold=threshold, use_img=True, skip_mask_kernel=skip_mask_kernel_image,
-                                        voxel_stride=1, norm_fn=norm_fn, indice_key='spconv_focal_multimodal')
+            self.conv_focal_multimodal = FocalSparseConv(16, 16,
+                                                         image_channel=model_cfg_seg['channel_reduce']['out_channels'][
+                                                             0],
+                                                         topk=topk, threshold=threshold, use_img=True,
+                                                         skip_mask_kernel=skip_mask_kernel_image,
+                                                         voxel_stride=1, norm_fn=norm_fn,
+                                                         indice_key='spconv_focal_multimodal')
 
-        special_spconv_fn = partial(FocalSparseConv, mask_multi=mask_multi, enlarge_voxel_channels=enlarge_voxel_channels, 
-                                    topk=topk, threshold=threshold, kernel_size=kernel_size, padding=kernel_size//2, 
+        special_spconv_fn = partial(FocalSparseConv, mask_multi=mask_multi,
+                                    enlarge_voxel_channels=enlarge_voxel_channels,
+                                    topk=topk, threshold=threshold, kernel_size=kernel_size, padding=kernel_size // 2,
                                     skip_mask_kernel=skip_mask_kernel)
         self.use_img = use_img
 
@@ -158,7 +164,7 @@ class VoxelBackBone8xFocal(nn.Module):
             special_spconv_fn(16, 16, voxel_stride=1, norm_fn=norm_fn, indice_key='focal1'),
         )
 
-        self.conv2 =SparseSequentialBatchdict(
+        self.conv2 = SparseSequentialBatchdict(
             # [1600, 1408, 41] <- [800, 704, 21]
             block(16, 32, 3, norm_fn=norm_fn, stride=2, padding=1, indice_key='spconv2', conv_type='spconv'),
             block(32, 32, 3, norm_fn=norm_fn, padding=1, indice_key='subm2'),
@@ -197,9 +203,9 @@ class VoxelBackBone8xFocal(nn.Module):
             'x_conv3': 64,
             'x_conv4': 64
         }
-        
+
         self.forward_ret_dict = {}
-        
+
     def get_loss(self, tb_dict=None):
         loss = self.forward_ret_dict['loss_box_of_pts']
         if tb_dict is None:

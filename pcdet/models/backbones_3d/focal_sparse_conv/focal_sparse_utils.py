@@ -31,10 +31,11 @@ class FocalLoss(nn.Module):
         logit = F.softmax(input, dim=-1)
         logit = logit.clamp(self.eps, 1. - self.eps)
 
-        loss = -1 * y * torch.log(logit) # cross entropy
-        loss = loss * (1 - logit) ** self.gamma # focal loss
+        loss = -1 * y * torch.log(logit)  # cross entropy
+        loss = loss * (1 - logit) ** self.gamma  # focal loss
 
         return loss.mean()
+
 
 def sort_by_indices(features, indices, features_add=None):
     """
@@ -45,13 +46,15 @@ def sort_by_indices(features, indices, features_add=None):
             features_add: [N, C], additional features to sort
     """
     idx = indices[:, 1:]
-    idx_sum = idx.select(1, 0) * idx[:, 1].max() * idx[:, 2].max() + idx.select(1, 1) * idx[:, 2].max() + idx.select(1, 2)
+    idx_sum = idx.select(1, 0) * idx[:, 1].max() * idx[:, 2].max() + idx.select(1, 1) * idx[:, 2].max() + idx.select(1,
+                                                                                                                     2)
     _, ind = idx_sum.sort()
     features = features[ind]
     indices = indices[ind]
     if not features_add is None:
         features_add = features_add[ind]
     return features, indices, features_add
+
 
 def check_repeat(features, indices, features_add=None, sort_first=True, flip_first=True):
     """
@@ -65,12 +68,14 @@ def check_repeat(features, indices, features_add=None, sort_first=True, flip_fir
         features, indices = features.flip([0]), indices.flip([0])
 
     if not features_add is None:
-        features_add=features_add.flip([0])
+        features_add = features_add.flip([0])
 
     idx = indices[:, 1:].int()
-    idx_sum = torch.add(torch.add(idx.select(1, 0) * idx[:, 1].max() * idx[:, 2].max(), idx.select(1, 1) * idx[:, 2].max()), idx.select(1, 2))
+    idx_sum = torch.add(
+        torch.add(idx.select(1, 0) * idx[:, 1].max() * idx[:, 2].max(), idx.select(1, 1) * idx[:, 2].max()),
+        idx.select(1, 2))
     _unique, inverse, counts = torch.unique_consecutive(idx_sum, return_inverse=True, return_counts=True, dim=0)
-    
+
     if _unique.shape[0] < indices.shape[0]:
         perm = torch.arange(inverse.size(0), dtype=inverse.dtype, device=inverse.device)
         features_new = torch.zeros((_unique.shape[0], features.shape[-1]), device=features.device)
@@ -100,7 +105,7 @@ def split_voxels(x, b, imps_3d, voxels_3d, kernel_offsets, mask_multi=True, topk
             threshold: float, threshold value
     """
     index = x.indices[:, 0]
-    batch_index = index==b
+    batch_index = index == b
     indices_ori = x.indices[batch_index]
     features_ori = x.features[batch_index]
     mask_voxel = imps_3d[batch_index, -1].sigmoid()
@@ -111,8 +116,8 @@ def split_voxels(x, b, imps_3d, voxels_3d, kernel_offsets, mask_multi=True, topk
 
     if topk:
         _, indices = mask_voxel.sort(descending=True)
-        indices_fore = indices[:int(mask_voxel.shape[0]*threshold)]
-        indices_back = indices[int(mask_voxel.shape[0]*threshold):]
+        indices_fore = indices[:int(mask_voxel.shape[0] * threshold)]
+        indices_back = indices[int(mask_voxel.shape[0] * threshold):]
     else:
         indices_fore = mask_voxel > threshold
         indices_back = mask_voxel <= threshold
@@ -121,25 +126,29 @@ def split_voxels(x, b, imps_3d, voxels_3d, kernel_offsets, mask_multi=True, topk
     coords_fore = indices_ori[indices_fore]
 
     mask_kernel_fore = mask_kernel[indices_fore]
-    mask_kernel_bool = mask_kernel_fore>=threshold
-    voxel_kerels_imp = kernel_offsets.unsqueeze(0).repeat(mask_kernel_bool.shape[0],1, 1)
+    mask_kernel_bool = mask_kernel_fore >= threshold
+    voxel_kerels_imp = kernel_offsets.unsqueeze(0).repeat(mask_kernel_bool.shape[0], 1, 1)
     mask_kernel_fore = mask_kernel[indices_fore][mask_kernel_bool]
     indices_fore_kernels = coords_fore[:, 1:].unsqueeze(1).repeat(1, kernel_offsets.shape[0], 1)
     indices_with_imp = indices_fore_kernels + voxel_kerels_imp
     selected_indices = indices_with_imp[mask_kernel_bool]
-    spatial_indices = (selected_indices[:, 0] >0) * (selected_indices[:, 1] >0) * (selected_indices[:, 2] >0)  * \
-                        (selected_indices[:, 0] < x.spatial_shape[0]) * (selected_indices[:, 1] < x.spatial_shape[1]) * (selected_indices[:, 2] < x.spatial_shape[2])
+    spatial_indices = (selected_indices[:, 0] > 0) * (selected_indices[:, 1] > 0) * (selected_indices[:, 2] > 0) * \
+                      (selected_indices[:, 0] < x.spatial_shape[0]) * (selected_indices[:, 1] < x.spatial_shape[1]) * (
+                                  selected_indices[:, 2] < x.spatial_shape[2])
     selected_indices = selected_indices[spatial_indices]
     mask_kernel_fore = mask_kernel_fore[spatial_indices]
-    selected_indices = torch.cat([torch.ones((selected_indices.shape[0], 1), device=features_fore.device)*b, selected_indices], dim=1)
+    selected_indices = torch.cat(
+        [torch.ones((selected_indices.shape[0], 1), device=features_fore.device) * b, selected_indices], dim=1)
 
     selected_features = torch.zeros((selected_indices.shape[0], features_ori.shape[1]), device=features_fore.device)
 
     features_fore_cat = torch.cat([features_fore, selected_features], dim=0)
     coords_fore = torch.cat([coords_fore, selected_indices], dim=0)
-    mask_kernel_fore = torch.cat([torch.ones(features_fore.shape[0], device=features_fore.device), mask_kernel_fore], dim=0)
+    mask_kernel_fore = torch.cat([torch.ones(features_fore.shape[0], device=features_fore.device), mask_kernel_fore],
+                                 dim=0)
 
-    features_fore, coords_fore, mask_kernel_fore = check_repeat(features_fore_cat, coords_fore, features_add=mask_kernel_fore)
+    features_fore, coords_fore, mask_kernel_fore = check_repeat(features_fore_cat, coords_fore,
+                                                                features_add=mask_kernel_fore)
 
     features_back = features_ori[indices_back]
     coords_back = indices_ori[indices_back]
