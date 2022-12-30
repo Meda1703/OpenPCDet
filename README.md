@@ -6,10 +6,6 @@
 
 It is also the official code release of [`[PointRCNN]`](https://arxiv.org/abs/1812.04244), [`[Part-A2-Net]`](https://arxiv.org/abs/1907.03670), [`[PV-RCNN]`](https://arxiv.org/abs/1912.13192), [`[Voxel R-CNN]`](https://arxiv.org/abs/2012.15712), [`[PV-RCNN++]`](https://arxiv.org/abs/2102.00463) and [`[MPPNet]`](https://arxiv.org/abs/2205.05979). 
 
-**Highlights**: 
-* `OpenPCDet` has been updated to `v0.6.0` (Sep. 2022).
-* The codes of PV-RCNN++ has been supported.
-* The codes of MPPNet has been supported. 
 
 ## Overview
 - [Installation](docs/INSTALL.md)
@@ -22,7 +18,7 @@ It is also the official code release of [`[PointRCNN]`](https://arxiv.org/abs/18
 
 ## Installation
 
-### Install `pcdet v0.5`
+### Install `pcdet v0.6`
 1. Clone this repository.
 ```shell
 git clone https://github.com/Meda1703/OpenPCDet.git
@@ -55,12 +51,12 @@ Please refer to [INSTALL.md](docs/INSTALL.md) for detailed installation of `Open
 ```
 pip install open3d
 ```
-Run the demo with a pretrained model (e.g. PV-RCNN):
+Run the demo with a pretrained model (e.g. Voxel-RCNN):
 
 ```shell
-python demo.py --cfg_file cfgs/kitti_models/pv_rcnn.yaml \
-    --ckpt pv_rcnn_8369.pth \
-    --data_path ${POINT_CLOUD_DATA}
+python demo.py --cfg_file cfgs/kitti_models/voxel_rcnn_car.yaml \
+    --ckpt ../checkpoints/voxel_rcnn_car_84.54.pth \
+    --data_path ../data/kitti/training/velodyne/000008.bin
 ```
 
 Please refer to [DEMO.md](docs/DEMO.md) for a quick demo to test with a pretrained model and 
@@ -191,24 +187,15 @@ Contributions are also welcomed.
 ## Model Zoo
 
 ### KITTI 3D Object Detection Baselines
-Selected supported methods are shown in the below table. The results are the 3D detection performance of moderate difficulty on the *val* set of KITTI dataset.
-* All LiDAR-based models are trained with 8 GTX 1080Ti GPUs and are available for download. 
-* The training time is measured with 8 TITAN XP GPUs and PyTorch 1.5.
+The results are the 3D detection performance of moderate difficulty on the *val* set of KITTI dataset.
 
-|                                             | training time | Car@R11 | Pedestrian@R11 | Cyclist@R11  | download | 
-|---------------------------------------------|----------:|:-------:|:-------:|:-------:|:---------:|
-| [PointPillar](tools/cfgs/kitti_models/pointpillar.yaml) |~1.2 hours| 77.28 | 52.29 | 62.68 | [model-18M](https://drive.google.com/file/d/1wMxWTpU1qUoY3DsCH31WJmvJxcjFXKlm/view?usp=sharing) | 
-| [SECOND](tools/cfgs/kitti_models/second.yaml)       |  ~1.7 hours  | 78.62 | 52.98 | 67.15 | [model-20M](https://drive.google.com/file/d/1-01zsPOsqanZQqIIyy7FpNXStL3y4jdR/view?usp=sharing) |
-| [SECOND-IoU](tools/cfgs/kitti_models/second_iou.yaml)       | -  | 79.09 | 55.74 | 71.31 | [model-46M](https://drive.google.com/file/d/1AQkeNs4bxhvhDQ-5sEo_yvQUlfo73lsW/view?usp=sharing) |
-| [PointRCNN](tools/cfgs/kitti_models/pointrcnn.yaml) | ~3 hours | 78.70 | 54.41 | 72.11 | [model-16M](https://drive.google.com/file/d/1BCX9wMn-GYAfSOPpyxf6Iv6fc0qKLSiU/view?usp=sharing)| 
-| [PointRCNN-IoU](tools/cfgs/kitti_models/pointrcnn_iou.yaml) | ~3 hours | 78.75 | 58.32 | 71.34 | [model-16M](https://drive.google.com/file/d/1V0vNZ3lAHpEEt0MlT80eL2f41K2tHm_D/view?usp=sharing)|
-| [Part-A2-Free](tools/cfgs/kitti_models/PartA2_free.yaml)   | ~3.8 hours| 78.72 | 65.99 | 74.29 | [model-226M](https://drive.google.com/file/d/1lcUUxF8mJgZ_e-tZhP1XNQtTBuC-R0zr/view?usp=sharing) |
-| [Part-A2-Anchor](tools/cfgs/kitti_models/PartA2.yaml)    | ~4.3 hours| 79.40 | 60.05 | 69.90 | [model-244M](https://drive.google.com/file/d/10GK1aCkLqxGNeX3lVu8cLZyE0G8002hY/view?usp=sharing) |
-| [PV-RCNN](tools/cfgs/kitti_models/pv_rcnn.yaml) | ~5 hours| 83.61 | 57.90 | 70.47 | [model-50M](https://drive.google.com/file/d/1lIOq4Hxr0W3qsX83ilQv0nk1Cls6KAr-/view?usp=sharing) |
-| [Voxel R-CNN (Car)](tools/cfgs/kitti_models/voxel_rcnn_car.yaml) | ~2.2 hours| 84.54 | - | - | [model-28M](https://drive.google.com/file/d/19_jiAeGLz7V0wNjSJw4cKmMjdm5EW5By/view?usp=sharing) |
-| [Focals Conv - F](tools/cfgs/kitti_models/voxel_rcnn_car_focal_multimodal.yaml) | ~4 hours| 85.66 | - | - | [model-30M](https://drive.google.com/file/d/1u2Vcg7gZPOI-EqrHy7_6fqaibvRt2IjQ/view?usp=sharing) |
-||
-| [CaDDN (Mono)](tools/cfgs/kitti_models/CaDDN.yaml) |~15 hours| 21.38 | 13.02 | 9.76 | [model-774M](https://drive.google.com/file/d/1OQTO2PtXT8GGr35W9m2GZGuqgb6fyU1V/view?usp=sharing) |
+
+|                                                                                     | Car@R11 | Pedestrian@R11 | Cyclist@R11 | Epoch |
+|-------------------------------------------------------------------------------------|--------:|:--------------:|:-----------:|:-----:|
+| [Voxel R-CNN (Baseline)](tools/cfgs/kitti_models/voxel_rcnn_car.yaml)               |   83.01 |       -        |      -      |  76   |
+| [Voxel R-CNN (Ranger optimizer)](tools/cfgs/kitti_models/voxel_rcnn_ranger.yaml)    |   82.44 |       -        |      -      |  72   |
+| [Voxel R-CNN (Asym Encoder, no neck)](tools/cfgs/kitti_models/voxel_rcnn_asym.yaml) |   82.64 |       -        |      -      |  77   |
+| [Voxel R-CNN (DA-sampler)](tools/cfgs/kitti_models/voxel_rcnn_da_gt_sampling.yaml)  |   84.78 |       -        |      -      |  80   |
 
 
 
