@@ -34,7 +34,7 @@ def parse_config():
     parser.add_argument('--fix_random_seed', action='store_true', default=False, help='')
     parser.add_argument('--ckpt_save_interval', type=int, default=1, help='number of training epochs')
     parser.add_argument('--local_rank', type=int, default=0, help='local rank for distributed training')
-    parser.add_argument('--max_ckpt_save_num', type=int, default=30, help='max number of saved checkpoint')
+    parser.add_argument('--max_ckpt_save_num', type=int, default=60, help='max number of saved checkpoint')
     parser.add_argument('--merge_all_iters_to_one_epoch', action='store_true', default=False, help='')
     parser.add_argument('--set', dest='set_cfgs', default=None, nargs=argparse.REMAINDER,
                         help='set extra config keys if needed')
@@ -43,12 +43,12 @@ def parse_config():
     parser.add_argument('--start_epoch', type=int, default=0, help='')
     parser.add_argument('--num_epochs_to_eval', type=int, default=0, help='number of checkpoints to be evaluated')
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
-    
-    parser.add_argument('--use_tqdm_to_record', action='store_true', default=False, help='if True, the intermediate losses will not be logged to file, only tqdm will be used')
+
+    parser.add_argument('--use_tqdm_to_record', action='store_true', default=False,
+                        help='if True, the intermediate losses will not be logged to file, only tqdm will be used')
     parser.add_argument('--logger_iter_interval', type=int, default=50, help='')
     parser.add_argument('--ckpt_save_time_interval', type=int, default=300, help='in terms of seconds')
     parser.add_argument('--wo_gpu_stat', action='store_true', help='')
-    
 
     args = parser.parse_args()
 
@@ -134,11 +134,12 @@ def main():
         model.load_params_from_file(filename=args.pretrained_model, to_cpu=dist_train, logger=logger)
 
     if args.ckpt is not None:
-        it, start_epoch = model.load_params_with_optimizer(args.ckpt, to_cpu=dist_train, optimizer=optimizer, logger=logger)
+        it, start_epoch = model.load_params_with_optimizer(args.ckpt, to_cpu=dist_train, optimizer=optimizer,
+                                                           logger=logger)
         last_epoch = start_epoch + 1
     else:
         ckpt_list = glob.glob(str(ckpt_dir / '*.pth'))
-              
+
         if len(ckpt_list) > 0:
             ckpt_list.sort(key=os.path.getmtime)
             while len(ckpt_list) > 0:
@@ -182,11 +183,11 @@ def main():
         lr_warmup_scheduler=lr_warmup_scheduler,
         ckpt_save_interval=args.ckpt_save_interval,
         max_ckpt_save_num=args.max_ckpt_save_num,
-        merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch, 
-        logger=logger, 
+        merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
+        logger=logger,
         logger_iter_interval=args.logger_iter_interval,
         ckpt_save_time_interval=args.ckpt_save_time_interval,
-        use_logger_to_record=not args.use_tqdm_to_record, 
+        use_logger_to_record=not args.use_tqdm_to_record,
         show_gpu_stat=not args.wo_gpu_stat
     )
 
@@ -206,7 +207,8 @@ def main():
     )
     eval_output_dir = output_dir / 'eval' / 'eval_with_train'
     eval_output_dir.mkdir(parents=True, exist_ok=True)
-    args.start_epoch = max(args.epochs - args.num_epochs_to_eval, 0)  # Only evaluate the last args.num_epochs_to_eval epochs
+    args.start_epoch = max(args.epochs - args.num_epochs_to_eval,
+                           0)  # Only evaluate the last args.num_epochs_to_eval epochs
 
     repeat_eval_ckpt(
         model.module if dist_train else model,

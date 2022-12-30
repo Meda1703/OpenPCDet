@@ -188,6 +188,8 @@ class DatasetTemplate(torch_data.Dataset):
             return self.__getitem__(new_index)
 
         data_dict.pop('gt_names', None)
+        if 'valid_noise' in data_dict:
+            data_dict.pop('valid_noise')
 
         return data_dict
 
