@@ -130,17 +130,38 @@ class DataProcessor(object):
                 max_num_points_per_voxel=config.MAX_POINTS_PER_VOXEL,
                 max_num_voxels=config.MAX_NUMBER_OF_VOXELS[self.mode],
             )
+            
+        if self.training:
+            points = data_dict['points']
+            voxel_output = self.voxel_generator.generate(points)
+            voxels, coordinates, num_points = voxel_output
 
-        points = data_dict['points']
-        voxel_output = self.voxel_generator.generate(points)
-        voxels, coordinates, num_points = voxel_output
+            if not data_dict['use_lead_xyz']:
+                voxels = voxels[..., 3:]  # remove xyz in voxels(N, 3)
 
-        if not data_dict['use_lead_xyz']:
-            voxels = voxels[..., 3:]  # remove xyz in voxels(N, 3)
+            data_dict['voxels'] = voxels
+            data_dict['voxel_coords'] = coordinates
+            data_dict['voxel_num_points'] = num_points
+        else:
+            rot_num = 0
+            for key in list(data_dict.keys()):
+                if 'gt_boxes' in key:
+                    rot_num += 1
+            for i in range(rot_num):
+                if i == 0:
+                    suffix = ''
+                else:
+                    suffix = str(i)
+                points = data_dict['points' + suffix]
+                voxel_output = self.voxel_generator.generate(points)
+                voxels, coordinates, num_points = voxel_output
 
-        data_dict['voxels'] = voxels
-        data_dict['voxel_coords'] = coordinates
-        data_dict['voxel_num_points'] = num_points
+                if not data_dict['use_lead_xyz']:
+                    voxels = voxels[..., 3:]  # remove xyz in voxels(N, 3)
+
+                data_dict['voxels'+suffix] = voxels
+                data_dict['voxel_coords'+suffix] = coordinates
+                data_dict['voxel_num_points'+suffix] = num_points
         return data_dict
 
     def sample_points(self, data_dict=None, config=None):

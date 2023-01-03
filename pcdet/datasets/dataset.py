@@ -8,6 +8,7 @@ from ..utils import common_utils
 from .augmentor.data_augmentor import DataAugmentor
 from .processor.data_processor import DataProcessor
 from .processor.point_feature_encoder import PointFeatureEncoder
+from .augmentor.tta_augmentor import TTAugmentor
 
 
 class DatasetTemplate(torch_data.Dataset):
@@ -27,9 +28,19 @@ class DatasetTemplate(torch_data.Dataset):
             self.dataset_cfg.POINT_FEATURE_ENCODING,
             point_cloud_range=self.point_cloud_range
         )
-        self.data_augmentor = DataAugmentor(
-            self.root_path, self.dataset_cfg.DATA_AUGMENTOR, self.class_names, logger=self.logger
-        ) if self.training else None
+        if self.training:
+            self.data_augmentor = DataAugmentor(
+                self.root_path, self.dataset_cfg.DATA_AUGMENTOR, self.class_names, logger=self.logger
+            )
+        else:
+            tta_cfg = self.dataset_cfg.get('TTAugmentor', None)
+            if tta_cfg is not None:
+                if tta_cfg.ENABLED:
+                    self.tta_data_augmentor = TTAugmentor(tta_cfg)
+                else:
+                    logger.info("Test time augmentation is not used.")
+                    self.data_augmentor = None
+                    self.tta_data_augmentor = None
         self.data_processor = DataProcessor(
             self.dataset_cfg.DATA_PROCESSOR, point_cloud_range=self.point_cloud_range,
             training=self.training, num_point_features=self.point_feature_encoder.num_point_features
@@ -44,7 +55,7 @@ class DatasetTemplate(torch_data.Dataset):
             self.depth_downsample_factor = self.data_processor.depth_downsample_factor
         else:
             self.depth_downsample_factor = None
-            
+
     @property
     def mode(self):
         return 'train' if self.training else 'test'
@@ -72,7 +83,7 @@ class DatasetTemplate(torch_data.Dataset):
         Returns:
 
         """
-        
+
         def get_template_prediction(num_samples):
             box_dim = 9 if self.dataset_cfg.get('TRAIN_WITH_SPEED', False) else 7
             ret_dict = {
@@ -154,7 +165,7 @@ class DatasetTemplate(torch_data.Dataset):
         if self.training:
             assert 'gt_boxes' in data_dict, 'gt_boxes should be provided for training'
             gt_boxes_mask = np.array([n in self.class_names for n in data_dict['gt_names']], dtype=np.bool_)
-            
+
             if 'calib' in data_dict:
                 calib = data_dict['calib']
             data_dict = self.data_augmentor.forward(
@@ -165,6 +176,13 @@ class DatasetTemplate(torch_data.Dataset):
             )
             if 'calib' in data_dict:
                 data_dict['calib'] = calib
+        else:
+            if self.tta_data_augmentor:
+                data_dict = self.tta_data_augmentor.input_transform(
+                    data_dict={
+                        **data_dict,
+                    }
+                )
         if data_dict.get('gt_boxes', None) is not None:
             selected = common_utils.keep_arrays_by_name(data_dict['gt_names'], self.class_names)
             data_dict['gt_boxes'] = data_dict['gt_boxes'][selected]
@@ -204,15 +222,18 @@ class DatasetTemplate(torch_data.Dataset):
 
         for key, val in data_dict.items():
             try:
-                if key in ['voxels', 'voxel_num_points']:
+                if key in ['voxels', 'voxels1', 'voxels2', 'voxels3', 'voxels4', 'voxels5', 'voxel_num_points',
+                           'voxel_num_points1', 'voxel_num_points2', 'voxel_num_points3', 'voxel_num_points4',
+                           'voxel_num_points5']:
                     ret[key] = np.concatenate(val, axis=0)
-                elif key in ['points', 'voxel_coords']:
+                elif key in ['points', 'points1', 'points2', 'points3', 'points4', 'points5', 'voxel_coords',
+                             'voxel_coords1', 'voxel_coords2', 'voxel_coords3', 'voxel_coords4', 'voxel_coords5']:
                     coors = []
                     for i, coor in enumerate(val):
                         coor_pad = np.pad(coor, ((0, 0), (1, 0)), mode='constant', constant_values=i)
                         coors.append(coor_pad)
                     ret[key] = np.concatenate(coors, axis=0)
-                elif key in ['gt_boxes']:
+                elif key in ['gt_boxes', 'gt_boxes1', 'gt_boxes2', 'gt_boxes3', 'gt_boxes4', 'gt_boxes5']:
                     max_gt = max([len(x) for x in val])
                     batch_gt_boxes3d = np.zeros((batch_size, max_gt, val[0].shape[-1]), dtype=np.float32)
                     for k in range(batch_size):
@@ -221,16 +242,17 @@ class DatasetTemplate(torch_data.Dataset):
 
                 elif key in ['roi_boxes']:
                     max_gt = max([x.shape[1] for x in val])
-                    batch_gt_boxes3d = np.zeros((batch_size, val[0].shape[0], max_gt, val[0].shape[-1]), dtype=np.float32)
+                    batch_gt_boxes3d = np.zeros((batch_size, val[0].shape[0], max_gt, val[0].shape[-1]),
+                                                dtype=np.float32)
                     for k in range(batch_size):
-                        batch_gt_boxes3d[k,:, :val[k].shape[1], :] = val[k]
+                        batch_gt_boxes3d[k, :, :val[k].shape[1], :] = val[k]
                     ret[key] = batch_gt_boxes3d
 
                 elif key in ['roi_scores', 'roi_labels']:
                     max_gt = max([x.shape[1] for x in val])
                     batch_gt_boxes3d = np.zeros((batch_size, val[0].shape[0], max_gt), dtype=np.float32)
                     for k in range(batch_size):
-                        batch_gt_boxes3d[k,:, :val[k].shape[1]] = val[k]
+                        batch_gt_boxes3d[k, :, :val[k].shape[1]] = val[k]
                     ret[key] = batch_gt_boxes3d
 
                 elif key in ['gt_boxes2d']:
@@ -276,11 +298,11 @@ class DatasetTemplate(torch_data.Dataset):
                     pad_value = 0
                     points = []
                     for _points in val:
-                        pad_width = ((0, max_len-len(_points)), (0,0))
+                        pad_width = ((0, max_len - len(_points)), (0, 0))
                         points_pad = np.pad(_points,
-                                pad_width=pad_width,
-                                mode='constant',
-                                constant_values=pad_value)
+                                            pad_width=pad_width,
+                                            mode='constant',
+                                            constant_values=pad_value)
                         points.append(points_pad)
                     ret[key] = np.stack(points, axis=0)
                 else:

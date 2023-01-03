@@ -59,6 +59,17 @@ DATA_CONFIG:
               SWAP_PROB: 0.1
               SWAP_MAX_NUM: 50
 
+    TTAugmentor:
+      ENABLED: True
+      AUG_CONFIG_LIST:
+        - NAME: world_rotation
+          WORLD_ROT_ANGLE: [ 0,  0, 0, 0, 0.38]
+        - NAME: world_flip
+          ALONG_AXIS_LIST: [ 1, 0, 1, 0, 0]
+        - NAME: world_scaling
+          WORLD_SCALE_RANGE: [ 1, 1., 1.02, 0.98, 1.0]
+
+
 MODEL:
     NAME: VoxelRCNN
 

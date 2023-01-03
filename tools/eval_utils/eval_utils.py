@@ -7,6 +7,7 @@ import tqdm
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
+from pcdet.datasets.augmentor.augmentor_utils import transform_backward
 
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):
@@ -16,7 +17,8 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
     metric['gt_num'] += ret_dict.get('gt', 0)
     min_thresh = cfg.MODEL.POST_PROCESSING.RECALL_THRESH_LIST[0]
     disp_dict['recall_%s' % str(min_thresh)] = \
-        '(%d, %d) / %d' % (metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
+        '(%d, %d) / %d' % (
+        metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
 
 
 def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=False, result_dir=None):
@@ -46,23 +48,77 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
         num_gpus = torch.cuda.device_count()
         local_rank = cfg.LOCAL_RANK % num_gpus
         model = torch.nn.parallel.DistributedDataParallel(
-                model,
-                device_ids=[local_rank],
-                broadcast_buffers=False
+            model,
+            device_ids=[local_rank],
+            broadcast_buffers=False
         )
     model.eval()
 
     if cfg.LOCAL_RANK == 0:
         progress_bar = tqdm.tqdm(total=len(dataloader), leave=True, desc='eval', dynamic_ncols=True)
     start_time = time.time()
+
     for i, batch_dict in enumerate(dataloader):
+        rot_num = 0
         load_data_to_gpu(batch_dict)
+        for key in list(batch_dict.keys()):
+            if 'gt_boxes' in key:
+                rot_num += 1
+        if rot_num != 1:
+            batch_list = []
+            key_to_add = ['frame_id', 'calib', 'road_plane', 'use_lead_xyz', 'image_shape', 'batch_size']
+            transform_param = []
+            for j in range(rot_num):
+                keys_to_save = []
+                keys_to_save = [key for key in key_to_add]
+                if j != 0:
+                    keys_to_save.append('points' + str(j))
+                    keys_to_save.append('gt_boxes' + str(j))
+                    keys_to_save.append('voxels' + str(j))
+                    keys_to_save.append('voxel_coords' + str(j))
+                    keys_to_save.append('voxel_num_points' + str(j))
+                else:
+                    keys_to_save.append('points')
+                    keys_to_save.append('gt_boxes')
+                    keys_to_save.append('voxels')
+                    keys_to_save.append('voxel_coords')
+                    keys_to_save.append('voxel_num_points')
+                transform_param.append(batch_dict['transform_param'][0][j])
+                batch_dict_copy = {}
+                for k, v in batch_dict.items():
+                    for key in keys_to_save:
+                        if key == k:
+                            if k == ('points' + str(j)):
+                                k = 'points'
+                            if k == ('gt_boxes' + str(j)):
+                                k = 'gt_boxes'
+                            if k == ('voxels' + str(j)):
+                                k = 'voxels'
+                            if k == ('voxel_coords' + str(j)):
+                                k = 'voxel_coords'
+                            if k == ('voxel_num_points' + str(j)):
+                                k = 'voxel_num_points'
+                            batch_dict_copy.update({k: v})
+                batch_dict_copy.update({'transform_param': transform_param[j]})
+                batch_list.append(batch_dict_copy)
 
         if getattr(args, 'infer_time', False):
             start_time = time.time()
-
-        with torch.no_grad():
-            pred_dicts, ret_dict = model(batch_dict)
+        pred_list = []
+        ret_list = []
+        if rot_num == 1:
+            with torch.no_grad():
+                pred_dicts, ret_dict = model(batch_dict)
+        else:
+            with torch.no_grad():
+                new_pred_list = []
+                for b in batch_list:
+                    pred_dicts, ret_dict = model(b)
+                    pred_list.append(pred_dicts)
+                    ret_list.append(ret_dict)
+                # transform back
+                for pred, transf in zip(pred_list, transform_param):
+                    pred = transform_backward(pred, transf)
 
         disp_dict = {}
 
