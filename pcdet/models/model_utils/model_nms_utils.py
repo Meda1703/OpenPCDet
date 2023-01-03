@@ -28,7 +28,7 @@ def compute_wbf(pred_list, ret_list, iou_thresh=0.85, iou_thresh2=0.03, type='me
 
     cluster_list = []
     batch_size = len(pred_list[0])
-    
+
 
 def class_agnostic_nms(box_scores, box_preds, nms_config, score_thresh=None):
     src_box_scores = box_scores
