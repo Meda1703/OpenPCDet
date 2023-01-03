@@ -20,7 +20,7 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
     disp_dict['recall_%s' % str(min_thresh)] = \
         '(%d, %d) / %d' % (
             metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
-
+        
 
 def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=False, result_dir=None):
     result_dir.mkdir(parents=True, exist_ok=True)
