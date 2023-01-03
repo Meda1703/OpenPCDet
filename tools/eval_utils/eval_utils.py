@@ -8,6 +8,7 @@ import tqdm
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
 from pcdet.datasets.augmentor.augmentor_utils import transform_backward
+from pcdet.models.model_utils import model_nms_utils
 
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):
@@ -18,7 +19,7 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
     min_thresh = cfg.MODEL.POST_PROCESSING.RECALL_THRESH_LIST[0]
     disp_dict['recall_%s' % str(min_thresh)] = \
         '(%d, %d) / %d' % (
-        metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
+            metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
 
 
 def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=False, result_dir=None):
@@ -119,6 +120,8 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
                 # transform back
                 for pred, transf in zip(pred_list, transform_param):
                     pred = transform_backward(pred, transf)
+                # merge predictions
+                pred_labels, pred_scores, pred_boxes = model_nms_utils.compute_wbf(pred_list, ret_list)
 
         disp_dict = {}
 
@@ -131,8 +134,8 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
         statistics_info(cfg, ret_dict, metric, disp_dict)
         annos = dataset.generate_prediction_dicts(
             batch_dict, pred_dicts, class_names,
-            output_path=final_output_dir if args.save_to_file else None
-        )
+            output_path=final_output_dir if args.save_to_file else None)
+
         det_annos += annos
         if cfg.LOCAL_RANK == 0:
             progress_bar.set_postfix(disp_dict)

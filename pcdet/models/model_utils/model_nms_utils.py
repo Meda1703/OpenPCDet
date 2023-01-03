@@ -1,7 +1,34 @@
 import torch
 
 from ...ops.iou3d_nms import iou3d_nms_utils
+import numpy as np
 
+
+def limit(ang):
+    ang = ang % (2 * np.pi)
+
+    ang[ang > np.pi] = ang[ang > np.pi] - 2 * np.pi
+
+    ang[ang < -np.pi] = ang[ang < -np.pi] + 2 * np.pi
+
+    return ang
+
+
+def compute_wbf(pred_list, ret_list, iou_thresh=0.85, iou_thresh2=0.03, type='mean'):
+    print("Computing WBF")
+    pred_scores = []
+    pred_boxes = []
+    pred_labels = []
+    cluster_id = -1
+    cluster_box_dict = {}
+    cluster_score_dict = {}
+
+    cluster_merged_dict = {}
+    cluster_name_dict = {}
+
+    cluster_list = []
+    batch_size = len(pred_list[0])
+    
 
 def class_agnostic_nms(box_scores, box_preds, nms_config, score_thresh=None):
     src_box_scores = box_scores
