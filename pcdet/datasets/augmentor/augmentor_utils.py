@@ -687,102 +687,103 @@ def local_pyramid_swap(gt_boxes, points, prob, max_num_pts, pyramids=None):
 
 
 def local_pyramid_swap(gt_boxes, points, prob, max_num_pts, pyramids=None):
-     def get_points_ratio(points, pyramid): 
-         surface_center = (pyramid[3:6] + pyramid[6:9] + pyramid[9:12] + pyramid[12:]) / 4.0 
-         vector_0, vector_1, vector_2 = pyramid[6:9] - pyramid[3:6], pyramid[12:] - pyramid[3:6], pyramid[0:3] - surface_center 
-         alphas = ((points[:, 0:3] - pyramid[3:6]) * vector_0).sum(-1) / np.power(vector_0, 2).sum() 
-         betas = ((points[:, 0:3] - pyramid[3:6]) * vector_1).sum(-1) / np.power(vector_1, 2).sum() 
-         gammas = ((points[:, 0:3] - surface_center) * vector_2).sum(-1) / np.power(vector_2, 2).sum() 
-         return [alphas, betas, gammas] 
-      
-     def recover_points_by_ratio(points_ratio, pyramid): 
-         alphas, betas, gammas = points_ratio 
-         surface_center = (pyramid[3:6] + pyramid[6:9] + pyramid[9:12] + pyramid[12:]) / 4.0 
-         vector_0, vector_1, vector_2 = pyramid[6:9] - pyramid[3:6], pyramid[12:] - pyramid[3:6], pyramid[0:3] - surface_center 
-         points = (alphas[:, None] * vector_0 + betas[:, None] * vector_1) + pyramid[3:6] + gammas[:, None] * vector_2 
-         return points 
-      
-     def recover_points_intensity_by_ratio(points_intensity_ratio, max_intensity, min_intensity): 
-         return points_intensity_ratio * (max_intensity - min_intensity) + min_intensity 
-      
-     # swap partition 
-     if pyramids is None: 
-         pyramids = get_pyramids(gt_boxes).reshape([-1, 6, 5, 3])  # each six surface of boxes: [num_boxes, 6, 15=3*5] 
-     swap_prob, num_thres = prob, max_num_pts 
-     swap_pyramid_mask = np.random.uniform(0, 1, (pyramids.shape[0])) <= swap_prob 
-      
-     if swap_pyramid_mask.sum() > 0: 
-         point_masks = points_in_pyramids_mask(points, pyramids) 
-         point_nums = point_masks.sum(0).reshape(pyramids.shape[0], -1)  # [N, 6] 
-         non_zero_pyramids_mask = point_nums > num_thres  # ingore dropout pyramids or highly occluded pyramids 
-         selected_pyramids = non_zero_pyramids_mask * swap_pyramid_mask[:, 
-                                                      None]  # selected boxes and all their valid pyramids 
-         # print(selected_pyramids) 
-         if selected_pyramids.sum() > 0: 
-             # get to_swap pyramids 
-             index_i, index_j = np.nonzero(selected_pyramids) 
-             selected_pyramid_indices = [np.random.choice(index_j[index_i == i]) \ 
-                                             if e and (index_i == i).any() else 0 for i, e in 
-                                         enumerate(swap_pyramid_mask)] 
-             selected_pyramids_mask = selected_pyramids * one_hot(selected_pyramid_indices, num_class=6) == 1 
-             to_swap_pyramids = pyramids[selected_pyramids_mask] 
-              
-             # get swapped pyramids 
-             index_i, index_j = np.nonzero(selected_pyramids_mask) 
-             non_zero_pyramids_mask[selected_pyramids_mask] = False 
-             swapped_index_i = np.array([np.random.choice(np.where(non_zero_pyramids_mask[:, j])[0]) if \ 
-                                             np.where(non_zero_pyramids_mask[:, j])[0].shape[0] > 0 else 
-                                         index_i[i] for i, j in enumerate(index_j.tolist())]) 
-             swapped_indicies = np.concatenate([swapped_index_i[:, None], index_j[:, None]], axis=1) 
-             swapped_pyramids = pyramids[ 
-                 swapped_indicies[:, 0].astype(np.int32), swapped_indicies[:, 1].astype(np.int32)] 
-              
-             # concat to_swap&swapped pyramids 
-             swap_pyramids = np.concatenate([to_swap_pyramids, swapped_pyramids], axis=0) 
-             swap_point_masks = points_in_pyramids_mask(points, swap_pyramids) 
-             remain_points = points[np.logical_not(swap_point_masks.any(-1))] 
-              
-             # swap pyramids 
-             points_res = [] 
-             num_swapped_pyramids = swapped_pyramids.shape[0] 
-             for i in range(num_swapped_pyramids): 
-                 to_swap_pyramid = to_swap_pyramids[i] 
-                 swapped_pyramid = swapped_pyramids[i] 
-                  
-                 to_swap_points = points[swap_point_masks[:, i]] 
-                 swapped_points = points[swap_point_masks[:, i + num_swapped_pyramids]] 
-                 # for intensity transform 
-                 to_swap_points_intensity_ratio = (to_swap_points[:, -1:] - to_swap_points[:, -1:].min()) / \ 
-                                                  np.clip( 
-                                                      (to_swap_points[:, -1:].max() - to_swap_points[:, -1:].min()), 
-                                                      1e-6, 1) 
-                 swapped_points_intensity_ratio = (swapped_points[:, -1:] - swapped_points[:, -1:].min()) / \ 
-                                                  np.clip( 
-                                                      (swapped_points[:, -1:].max() - swapped_points[:, -1:].min()), 
-                                                      1e-6, 1) 
-                  
-                 to_swap_points_ratio = get_points_ratio(to_swap_points, to_swap_pyramid.reshape(15)) 
-                 swapped_points_ratio = get_points_ratio(swapped_points, swapped_pyramid.reshape(15)) 
-                 new_to_swap_points = recover_points_by_ratio(swapped_points_ratio, to_swap_pyramid.reshape(15)) 
-                 new_swapped_points = recover_points_by_ratio(to_swap_points_ratio, swapped_pyramid.reshape(15)) 
-                 # for intensity transform 
-                 new_to_swap_points_intensity = recover_points_intensity_by_ratio( 
-                     swapped_points_intensity_ratio, to_swap_points[:, -1:].max(), 
-                     to_swap_points[:, -1:].min()) 
-                 new_swapped_points_intensity = recover_points_intensity_by_ratio( 
-                     to_swap_points_intensity_ratio, swapped_points[:, -1:].max(), 
-                     swapped_points[:, -1:].min()) 
-                  
-                 # new_to_swap_points = np.concatenate([new_to_swap_points, swapped_points[:, -1:]], axis=1) 
-                 # new_swapped_points = np.concatenate([new_swapped_points, to_swap_points[:, -1:]], axis=1) 
-                  
-                 new_to_swap_points = np.concatenate([new_to_swap_points, new_to_swap_points_intensity], axis=1) 
-                 new_swapped_points = np.concatenate([new_swapped_points, new_swapped_points_intensity], axis=1) 
-                  
-                 points_res.append(new_to_swap_points) 
-                 points_res.append(new_swapped_points) 
-              
-             points_res = np.concatenate(points_res, axis=0) 
-             points = np.concatenate([remain_points, points_res], axis=0) 
-    return gt_boxes, points 
-    
+    def get_points_ratio(points, pyramid):
+        surface_center = (pyramid[3:6] + pyramid[6:9] + pyramid[9:12] + pyramid[12:]) / 4.0
+        vector_0, vector_1, vector_2 = pyramid[6:9] - pyramid[3:6], pyramid[12:] - pyramid[3:6], pyramid[
+                                                                                                 0:3] - surface_center
+        alphas = ((points[:, 0:3] - pyramid[3:6]) * vector_0).sum(-1) / np.power(vector_0, 2).sum()
+        betas = ((points[:, 0:3] - pyramid[3:6]) * vector_1).sum(-1) / np.power(vector_1, 2).sum()
+        gammas = ((points[:, 0:3] - surface_center) * vector_2).sum(-1) / np.power(vector_2, 2).sum()
+        return [alphas, betas, gammas]
+
+    def recover_points_by_ratio(points_ratio, pyramid):
+        alphas, betas, gammas = points_ratio
+        surface_center = (pyramid[3:6] + pyramid[6:9] + pyramid[9:12] + pyramid[12:]) / 4.0
+        vector_0, vector_1, vector_2 = pyramid[6:9] - pyramid[3:6], pyramid[12:] - pyramid[3:6], pyramid[
+                                                                                                 0:3] - surface_center
+        points = (alphas[:, None] * vector_0 + betas[:, None] * vector_1) + pyramid[3:6] + gammas[:, None] * vector_2
+        return points
+
+    def recover_points_intensity_by_ratio(points_intensity_ratio, max_intensity, min_intensity):
+        return points_intensity_ratio * (max_intensity - min_intensity) + min_intensity
+
+    # swap partition
+    if pyramids is None:
+        pyramids = get_pyramids(gt_boxes).reshape([-1, 6, 5, 3])  # each six surface of boxes: [num_boxes, 6, 15=3*5]
+    swap_prob, num_thres = prob, max_num_pts
+    swap_pyramid_mask = np.random.uniform(0, 1, (pyramids.shape[0])) <= swap_prob
+
+    if swap_pyramid_mask.sum() > 0:
+        point_masks = points_in_pyramids_mask(points, pyramids)
+        point_nums = point_masks.sum(0).reshape(pyramids.shape[0], -1)  # [N, 6]
+        non_zero_pyramids_mask = point_nums > num_thres  # ingore dropout pyramids or highly occluded pyramids
+        selected_pyramids = non_zero_pyramids_mask * swap_pyramid_mask[:,
+                                                     None]  # selected boxes and all their valid pyramids
+        # print(selected_pyramids)
+        if selected_pyramids.sum() > 0:
+            # get to_swap pyramids
+            index_i, index_j = np.nonzero(selected_pyramids)
+            selected_pyramid_indices = [np.random.choice(index_j[index_i == i]) \
+                                            if e and (index_i == i).any() else 0 for i, e in
+                                        enumerate(swap_pyramid_mask)]
+            selected_pyramids_mask = selected_pyramids * one_hot(selected_pyramid_indices, num_class=6) == 1
+            to_swap_pyramids = pyramids[selected_pyramids_mask]
+
+            # get swapped pyramids
+            index_i, index_j = np.nonzero(selected_pyramids_mask)
+            non_zero_pyramids_mask[selected_pyramids_mask] = False
+            swapped_index_i = np.array([np.random.choice(np.where(non_zero_pyramids_mask[:, j])[0]) if \
+                                            np.where(non_zero_pyramids_mask[:, j])[0].shape[0] > 0 else
+                                        index_i[i] for i, j in enumerate(index_j.tolist())])
+            swapped_indicies = np.concatenate([swapped_index_i[:, None], index_j[:, None]], axis=1)
+            swapped_pyramids = pyramids[
+                swapped_indicies[:, 0].astype(np.int32), swapped_indicies[:, 1].astype(np.int32)]
+
+            # concat to_swap&swapped pyramids
+            swap_pyramids = np.concatenate([to_swap_pyramids, swapped_pyramids], axis=0)
+            swap_point_masks = points_in_pyramids_mask(points, swap_pyramids)
+            remain_points = points[np.logical_not(swap_point_masks.any(-1))]
+
+            # swap pyramids
+            points_res = []
+            num_swapped_pyramids = swapped_pyramids.shape[0]
+            for i in range(num_swapped_pyramids):
+                to_swap_pyramid = to_swap_pyramids[i]
+                swapped_pyramid = swapped_pyramids[i]
+
+                to_swap_points = points[swap_point_masks[:, i]]
+                swapped_points = points[swap_point_masks[:, i + num_swapped_pyramids]]
+                # for intensity transform
+                to_swap_points_intensity_ratio = (to_swap_points[:, -1:] - to_swap_points[:, -1:].min()) / \
+                                                 np.clip(
+                                                     (to_swap_points[:, -1:].max() - to_swap_points[:, -1:].min()),
+                                                     1e-6, 1)
+                swapped_points_intensity_ratio = (swapped_points[:, -1:] - swapped_points[:, -1:].min()) / \
+                                                 np.clip(
+                                                     (swapped_points[:, -1:].max() - swapped_points[:, -1:].min()),
+                                                     1e-6, 1)
+
+                to_swap_points_ratio = get_points_ratio(to_swap_points, to_swap_pyramid.reshape(15))
+                swapped_points_ratio = get_points_ratio(swapped_points, swapped_pyramid.reshape(15))
+                new_to_swap_points = recover_points_by_ratio(swapped_points_ratio, to_swap_pyramid.reshape(15))
+                new_swapped_points = recover_points_by_ratio(to_swap_points_ratio, swapped_pyramid.reshape(15))
+                # for intensity transform
+                new_to_swap_points_intensity = recover_points_intensity_by_ratio(
+                    swapped_points_intensity_ratio, to_swap_points[:, -1:].max(),
+                    to_swap_points[:, -1:].min())
+                new_swapped_points_intensity = recover_points_intensity_by_ratio(
+                    to_swap_points_intensity_ratio, swapped_points[:, -1:].max(),
+                    swapped_points[:, -1:].min())
+
+                # new_to_swap_points = np.concatenate([new_to_swap_points, swapped_points[:, -1:]], axis=1)
+                # new_swapped_points = np.concatenate([new_swapped_points, to_swap_points[:, -1:]], axis=1)
+
+                new_to_swap_points = np.concatenate([new_to_swap_points, new_to_swap_points_intensity], axis=1)
+                new_swapped_points = np.concatenate([new_swapped_points, new_swapped_points_intensity], axis=1)
+
+                points_res.append(new_to_swap_points)
+                points_res.append(new_swapped_points)
+
+            points_res = np.concatenate(points_res, axis=0)
+            points = np.concatenate([remain_points, points_res], axis=0)
+    return gt_boxes, points
