@@ -121,7 +121,8 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
                 for pred, transf in zip(pred_list, transform_param):
                     pred = transform_backward(pred, transf)
                 # merge predictions
-                pred_labels, pred_scores, pred_boxes = model_nms_utils.compute_wbf(pred_list, ret_list)
+                pred_dicts = model_nms_utils.compute_wbf(pred_list, ret_list)
+                ret_dict = ret_list[0]
 
         disp_dict = {}
 
