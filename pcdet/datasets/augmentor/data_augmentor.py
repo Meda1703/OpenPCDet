@@ -32,6 +32,15 @@ class DataAugmentor(object):
         )
         return db_sampler
 
+    def gt_sampling_mm(self, config=None):
+        db_sampler = database_sampler.DataBaseSamplerMM(
+            root_path=self.root_path,
+            sampler_cfg=config,
+            class_names=self.class_names,
+            logger=self.logger
+        )
+        return db_sampler
+
     def da_sampling(self, config=None):
         db_sampler = database_sampler.DADataBaseSampler(
             root_path=self.root_path,
@@ -319,12 +328,15 @@ class DataAugmentor(object):
         #     data_dict.pop('calib')
         if 'road_plane' in data_dict:
             data_dict.pop('road_plane')
+
         if 'gt_boxes_mask' in data_dict:
+            """
             gt_boxes_mask = data_dict['gt_boxes_mask']
             data_dict['gt_boxes'] = data_dict['gt_boxes'][gt_boxes_mask]
             data_dict['gt_names'] = data_dict['gt_names'][gt_boxes_mask]
             if 'gt_boxes2d' in data_dict:
                 data_dict['gt_boxes2d'] = data_dict['gt_boxes2d'][gt_boxes_mask]
-
+            """
             data_dict.pop('gt_boxes_mask')
+
         return data_dict
