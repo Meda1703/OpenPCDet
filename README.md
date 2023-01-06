@@ -190,13 +190,13 @@ Contributions are also welcomed.
 The results are the 3D detection performance of moderate difficulty on the *val* set of KITTI dataset.
 
 
-|                                                                                     | Car@R11 | Pedestrian@R11 | Cyclist@R11 | Epoch |
-|-------------------------------------------------------------------------------------|--------:|:--------------:|:-----------:|:-----:|
-| [Voxel R-CNN (Baseline)](tools/cfgs/kitti_models/voxel_rcnn_car.yaml)               |   83.06 |       -        |      -      |  76   |
-| [Voxel R-CNN (Ranger optimizer)](tools/cfgs/kitti_models/voxel_rcnn_ranger.yaml)    |   82.44 |       -        |      -      |  72   |
-| [Voxel R-CNN (Asym Encoder, no neck)](tools/cfgs/kitti_models/voxel_rcnn_asym.yaml) |   82.64 |       -        |      -      |  77   |
-| [Voxel R-CNN (DA-sampler)](tools/cfgs/kitti_models/voxel_rcnn_da_gt_sampling.yaml)  |   85.14 |       -        |      -      |  75   |
-
+|                                                                                                | Car@R11 | Pedestrian@R11 | Cyclist@R11 | Epoch |
+|------------------------------------------------------------------------------------------------|--------:|:--------------:|:-----------:|:-----:|
+| [Voxel R-CNN (Baseline)](tools/cfgs/kitti_models/voxel_rcnn/voxel_rcnn_car.yaml)               |   83.06 |       -        |      -      |  76   |
+| [Voxel R-CNN (Ranger optimizer)](tools/cfgs/kitti_models/voxel_rcnn/voxel_rcnn_ranger.yaml)    |   82.44 |       -        |      -      |  72   |
+| [Voxel R-CNN (Asym Encoder, no neck)](tools/cfgs/kitti_models/voxel_rcnn/voxel_rcnn_asym.yaml) |   82.64 |       -        |      -      |  77   |
+| [Voxel R-CNN (DA-sampler)](tools/cfgs/kitti_models/voxel_rcnn/voxel_rcnn_da_gt_sampling.yaml)  |   85.14 |       -        |      -      |  75   |
+| [Voxel R-CNN (DA-sampler) with wbf](tools/cfgs/kitti_models/voxel_rcnn/voxel_rcnn_da_wbf.yaml) |   85.64 |       -        |      -      |  75   |
 
 
 
